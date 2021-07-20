@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <cstring>
+#include <random>
 
 using namespace std;
 
@@ -117,7 +118,7 @@ void printRevealedWordVowelMarks(char mysteryWord[], int mysteryWordLength, cons
           break;
         }
       }
-      if (!isAVowel) cout << '-';
+      if (!isAVowel) cout << ' ';
       cout << ' ';
       isAVowel = false;
     }
@@ -292,14 +293,42 @@ void printMainMenu()
 // Game
 void runGame()
 {
+  bool gameRunning = true;
   // Guessed letters
   const int maxGuessedLetters = 27;
   char guessedLetters[maxGuessedLetters] = {' '};
   for (int i=1; i<maxGuessedLetters; i++) guessedLetters[i] = '0';
 
+  // Generate random word
+
+  string words[] = {"BUBBLES", "TOPAZ", "RIDICULOUS", "LOVELY", "ROYAL", "DOVES"};
+
+  // Finish random
+  default_random_engine generator; // (seed)
+  uniform_int_distribution<int> distribution(0,5);
+  int wordNumber = distribution(generator);
+  cout << "Word number: " << wordNumber << '\n';
+
   // Mystery Word
-  char mysteryWord[] = {"SNOOPLES AND STUFF"};
-  const int mysteryWordLength = strlen(mysteryWord);
+
+  string chosenWord = words[wordNumber];
+  const int mysteryWordLength = chosenWord.length();
+  char mysteryWord[mysteryWordLength];
+  for (int i=0; i<mysteryWordLength; i++)
+    mysteryWord[i] = chosenWord[i];
+  //const int mysteryWordLength = strlen(mysteryWord);
+  cout << "MysteryWordLength: " << mysteryWordLength;
+  /*
+  char * mysteryWordPointer = new (nothrow) char [mysteryWordLength];
+  if (mysteryWordPointer == nullptr)
+  {
+    cout << "Unable to allocate memory. Returning to main menu.";
+    gameRunning = false;
+  }
+  */
+  //char mysteryWord[] = {"BUBBLES"};
+
+  //const int mysteryWordLength = strlen(mysteryWord);
 
   // Revealed word
   char revealedWord[mysteryWordLength];
@@ -320,7 +349,7 @@ void runGame()
 
 
 
-  bool gameRunning = true;
+
   while (gameRunning)
   {
     printHangman(wrongGuesses);
