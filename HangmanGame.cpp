@@ -30,11 +30,7 @@ void printArtHorizontalLine()
 {
   for (int i=0; i<60; i++) cout << '/';
 }
-void printGameBox() //Empty
-{
-
-}
-void printHangman(int wrongGuesses) //Empty
+void printHangman(int wrongGuesses)
 {
   const int numRows = 10;
   const int numCols = 20;
@@ -141,10 +137,6 @@ void printDefeatMessage(char mysteryWord[])
   cout << "I'm sorry, you lost.";
   cout << "\n\nThe answer is: " << mysteryWord;
 }
-void printGameText()
-{
-
-}
 
 // Character Handling and Checking
 int convertCharToInt(char input)
@@ -194,12 +186,6 @@ bool getUserInput(string outputType)
   cout << "Please enter a valid option";
   return false;
 }
-/*void resetGame(int wrongGuesses, int guessNumber)
-{
-
-}
-*/
-
 bool inputWasNotAlreadyGuessed(int guessNumber, char guessedLetters[])
 {
   for (int i=1; i<=guessNumber; i++)
