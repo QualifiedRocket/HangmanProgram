@@ -1,7 +1,5 @@
 // Hangman in C++
 #include <iostream>
-#include <string>
-#include <sstream>
 #include <cstring>
 #include <random>
 #include <chrono>
@@ -119,7 +117,8 @@ int getRandomWord(myClock::time_point beginning)
 
   // Use seed to get random word
   default_random_engine generator(seed);
-  uniform_int_distribution<int> distribution(0,5);
+  const int wordsMax = 5;
+  uniform_int_distribution<int> distribution(0,wordsMax);
   return distribution(generator);
 }
 
@@ -165,26 +164,26 @@ int convertCharToInt(char input)
 {
   return input - 48;
 }
-bool checkIfUserInputIsOneChar(string input)
+bool checkIfUserInputIsOneChar(char input[])
 {
-  if (input.length() != 1)
+  if (strlen(input) != 1)
     return false;
   else
     return true;
 }
-bool getUserInput(string outputType)
+bool getUserInput(char outputType)
 {
-  if (outputType == "char")
+  if (outputType == 'c')
     cout << "Please enter a letter: ";
-  else if (outputType == "int")
+  else if (outputType == 'i')
     cout << "Please enter a number: ";
-  string input;
+  char input[32];
   char inputChar;
-  getline (cin, input);
+  cin.getline(input, 32);
   if (checkIfUserInputIsOneChar(input))
   {
-    stringstream (input) >> inputChar;
-    if (outputType == "char")
+    inputChar = input[0];
+    if (outputType == 'c')
     {
       if (isalpha(inputChar))
       {
@@ -196,7 +195,7 @@ bool getUserInput(string outputType)
         return true;
       }
     }
-    else if (outputType == "int")
+    else if (outputType == 'i')
     {
       if (isdigit(inputChar))
       {
@@ -220,9 +219,10 @@ bool inputWasNotAlreadyGuessed(int guessNumber, char guessedLetters[])
   }
   return true;
 }
-void addGuessToGuessedLetters(int guessNumber, char guessedLetters[])
+void addGuessToGuessedLetters(int& guessNumber, char guessedLetters[])
 {
   guessedLetters[guessNumber] = userInput;
+  guessNumber++;
 }
 bool guessIsCorrect(char mysteryWord[], int mysteryWordLength)
 {
@@ -285,7 +285,7 @@ void gameOptionsMenu()
   while (inGameOptionsMenu)
   {
     printOptionsMenu();
-    if (getUserInput("int"))
+    if (getUserInput('i'))
     {
       switch (userInput)
       {
@@ -320,22 +320,20 @@ void runGame(myClock::time_point beginning)
   const int maxGuessedLetters = 27;
   char guessedLetters[maxGuessedLetters] = {' '};
   for (int i=1; i<maxGuessedLetters; i++) guessedLetters[i] = '0';
-
-  string words[] = {"BUBBLES", "TOPAZ", "RIDICULOUS", "LOVELY", "ROYAL", "DOVES"};
+  const int maxWordLength = 11;
+  const char words[][maxWordLength] = {"BUBBLES", "TOPAZ", "LOVELIES", "HALLELUJAH", "DOVES", "SEETHING"};
   int wordNumber = getRandomWord(beginning);
   cout << "Word number: " << wordNumber << '\n';
 
   // Mystery word
-  string chosenWord = words[wordNumber];
-  const int mysteryWordLength = chosenWord.length();
+  const int mysteryWordLength = strlen(words[wordNumber]);
   char mysteryWord[mysteryWordLength];
-  for (int i=0; i<mysteryWordLength; i++)
-    mysteryWord[i] = chosenWord[i];
-  cout << "MysteryWordLength: " << mysteryWordLength;
+  for (int i=0; i<=mysteryWordLength; i++)
+    mysteryWord[i] = words[wordNumber][i];
 
   // Revealed word
   char revealedWord[mysteryWordLength];
-  for (int i=0; i < mysteryWordLength; i++)
+  for (int i=0; i<mysteryWordLength; i++)
   {
     if (mysteryWord[i] == ' ') revealedWord[i] = ' ';
     else revealedWord[i] = '_';
@@ -351,6 +349,7 @@ void runGame(myClock::time_point beginning)
 
   while (gameRunning)
   {
+    cout << "Word is: " << mysteryWord << '\n';
     printHangman(wrongGuesses);
     printWrongGuesses(wrongGuesses);
     cout << '\n';
@@ -374,12 +373,11 @@ void runGame(myClock::time_point beginning)
       cout << '\n';
       printArtHorizontalLine();
       cout << "\n\n";
-      if (getUserInput("char"))
+      if (getUserInput('c'))
       {
         if (inputWasNotAlreadyGuessed(guessNumber, guessedLetters))
         {
           addGuessToGuessedLetters(guessNumber, guessedLetters);
-          guessNumber++;
           if (guessIsCorrect(mysteryWord, mysteryWordLength))
             revealLetters(mysteryWord, mysteryWordLength, revealedWord);
           else wrongGuesses++;
@@ -396,7 +394,7 @@ void gameMainMenu(myClock::time_point beginning)
   while (inGameMainMenu)
   {
     printMainMenu();
-    if (getUserInput("int"))
+    if (getUserInput('i'))
     {
       switch (userInput)
       {
