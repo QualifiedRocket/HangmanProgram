@@ -4,8 +4,10 @@
 #include <sstream>
 #include <cstring>
 #include <random>
+#include <chrono>
 
 using namespace std;
+using myClock = chrono::high_resolution_clock;
 
 /*
 - Implement x under vowels - Done
@@ -14,8 +16,9 @@ using namespace std;
 - Create options menu - Done
 - Create single user input function - Done
 - Remove global variables - Done
--
-- Get random word on game start
+- Get vowel marks once - Done
+- Get random word on game start - Done
+- Get random word from text file -
 
 - Make this a collection of games
 */
@@ -39,9 +42,9 @@ void printHangman(int wrongGuesses)
   {
     {"     ________      "}, // row 0
     {"     ||//   |      "},
-    {"     ||/    1      "},
-    {"     ||    213     "},
-    {"     ||    4 5     "}, // row 4
+    {"     ||/           "},
+    {"     ||            "},
+    {"     ||            "}, // row 4
     {"   __||__________  "},
     {"  / /||\\        /| "},
     {" /____________ / | "},
@@ -84,6 +87,42 @@ void printHangman(int wrongGuesses)
   }
 }
 
+// Setup
+void getVowelMarks(const char mysteryWord[], int mysteryWordLength, char vowelMarks[])
+{
+  if (settingShowVowelMarks)
+  {
+    const char vowels[5] = {'A','E','I','O','U'};
+    bool isAVowel = false;
+    for (int i=0; i<mysteryWordLength; i++)
+    {
+      for (char d : vowels)
+      {
+        if (mysteryWord[i] == d)
+        {
+          isAVowel = true;
+          vowelMarks[i] = 'x';
+          break;
+        }
+      }
+      if (!isAVowel) vowelMarks[i] = '-';
+      isAVowel = false;
+    }
+  }
+}
+int getRandomWord(myClock::time_point beginning)
+{
+  // Get seed from system clock
+  myClock::duration difference = myClock::now() - beginning;
+  unsigned seed = difference.count();
+  cout << "Random seed: " << seed << '\n';
+
+  // Use seed to get random word
+  default_random_engine generator(seed);
+  uniform_int_distribution<int> distribution(0,5);
+  return distribution(generator);
+}
+
 // Printing Game Letters
 void printGuessedLetters(int guessNumber, char guessedLetters[])
 {
@@ -100,29 +139,11 @@ void printRevealedWord(char revealedWord[], int mysteryWordLength)
   for (int i=0; i<mysteryWordLength; i++) cout << revealedWord[i] << ' ';
   cout << '\n';
 }
-void printRevealedWordVowelMarks(char mysteryWord[], int mysteryWordLength, const char (& vowels)[5])
+void printVowelMarks(char vowelMarks[], int mysteryWordLength)
 {
-  if (settingShowVowelMarks)
-  {
-    bool isAVowel = false;
-    cout << "\t\t";
-
-    for (int i=0; i<mysteryWordLength; i++)
-    {
-      for (char d : vowels)
-      {
-        if (mysteryWord[i] == d)
-        {
-          isAVowel = true;
-          cout << 'x';
-          break;
-        }
-      }
-      if (!isAVowel) cout << ' ';
-      cout << ' ';
-      isAVowel = false;
-    }
-  }
+  cout << "\t\t";
+  for (int i=0; i<mysteryWordLength; i++)
+    cout << vowelMarks[i] << ' ';
   cout << "\n\n";
 }
 void printWrongGuesses(int numberOf)
@@ -291,44 +312,26 @@ void printMainMenu()
 }
 
 // Game
-void runGame()
+void runGame(myClock::time_point beginning)
 {
   bool gameRunning = true;
+  // Setup
   // Guessed letters
   const int maxGuessedLetters = 27;
   char guessedLetters[maxGuessedLetters] = {' '};
   for (int i=1; i<maxGuessedLetters; i++) guessedLetters[i] = '0';
 
-  // Generate random word
-
   string words[] = {"BUBBLES", "TOPAZ", "RIDICULOUS", "LOVELY", "ROYAL", "DOVES"};
-
-  // Finish random
-  default_random_engine generator; // (seed)
-  uniform_int_distribution<int> distribution(0,5);
-  int wordNumber = distribution(generator);
+  int wordNumber = getRandomWord(beginning);
   cout << "Word number: " << wordNumber << '\n';
 
-  // Mystery Word
-
+  // Mystery word
   string chosenWord = words[wordNumber];
   const int mysteryWordLength = chosenWord.length();
   char mysteryWord[mysteryWordLength];
   for (int i=0; i<mysteryWordLength; i++)
     mysteryWord[i] = chosenWord[i];
-  //const int mysteryWordLength = strlen(mysteryWord);
   cout << "MysteryWordLength: " << mysteryWordLength;
-  /*
-  char * mysteryWordPointer = new (nothrow) char [mysteryWordLength];
-  if (mysteryWordPointer == nullptr)
-  {
-    cout << "Unable to allocate memory. Returning to main menu.";
-    gameRunning = false;
-  }
-  */
-  //char mysteryWord[] = {"BUBBLES"};
-
-  //const int mysteryWordLength = strlen(mysteryWord);
 
   // Revealed word
   char revealedWord[mysteryWordLength];
@@ -339,16 +342,12 @@ void runGame()
   }
 
   // Vowels
-  char revealedWordVowelMarks[mysteryWordLength];
-  char vowels[5] = {'A','E','I','O','U'};
+  char vowelMarks[mysteryWordLength];
+  getVowelMarks(mysteryWord, mysteryWordLength, vowelMarks);
 
   int guessNumber = 1;
   int wrongGuesses = 0;
   cout << "\n\n";
-
-
-
-
 
   while (gameRunning)
   {
@@ -356,7 +355,7 @@ void runGame()
     printWrongGuesses(wrongGuesses);
     cout << '\n';
     printRevealedWord(revealedWord, mysteryWordLength);
-    printRevealedWordVowelMarks(mysteryWord, mysteryWordLength, vowels);
+    printVowelMarks(vowelMarks, mysteryWordLength);
     printGuessedLetters(guessNumber, guessedLetters);
     if (playerHasWon(mysteryWord, mysteryWordLength, revealedWord))
     {
@@ -390,8 +389,9 @@ void runGame()
     cout << '\n';
   }
 }
-void gameMainMenu()
+void gameMainMenu(myClock::time_point beginning)
 {
+  cout << "\nWelcome to Hangman!\n\n";
   bool inGameMainMenu = true;
   while (inGameMainMenu)
   {
@@ -401,13 +401,14 @@ void gameMainMenu()
       switch (userInput)
       {
         case 1:
-          runGame();
+          runGame(beginning);
           break;
         case 2:
           cout << "\n\n\n";
           gameOptionsMenu();
           break;
         case 3:
+          cout << "Thanks for playing!\n\n";
           inGameMainMenu = false;
           break;
         default:
@@ -420,13 +421,12 @@ void gameMainMenu()
 
 int main()
 {
-  cout << "\nWelcome to Hangman!\n\n";
+  myClock::time_point beginning = myClock::now();
   bool programRunning = true;
   while (programRunning)
   {
-    gameMainMenu();
+    gameMainMenu(beginning);
     programRunning = false;
   }
-  cout << "Thanks for playing!\n\n";
   return 0;
 }
