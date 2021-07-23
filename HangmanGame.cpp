@@ -1,6 +1,8 @@
 // Hangman in C++
 #include <iostream>
+#include <fstream>
 #include <cstring>
+#include <string>
 #include <random>
 #include <chrono>
 
@@ -164,9 +166,9 @@ int convertCharToInt(char input)
 {
   return input - 48;
 }
-bool checkIfUserInputIsOneChar(char input[])
+bool checkIfUserInputIsOneChar(string input)
 {
-  if (strlen(input) != 1)
+  if (input.length() != 1)
     return false;
   else
     return true;
@@ -177,9 +179,9 @@ bool getUserInput(char outputType)
     cout << "Please enter a letter: ";
   else if (outputType == 'i')
     cout << "Please enter a number: ";
-  char input[32];
+  string input;
   char inputChar;
-  cin.getline(input, 32);
+  getline(cin, input);
   if (checkIfUserInputIsOneChar(input))
   {
     inputChar = input[0];
@@ -321,6 +323,43 @@ void runGame(myClock::time_point beginning)
   char guessedLetters[maxGuessedLetters] = {' '};
   for (int i=1; i<maxGuessedLetters; i++) guessedLetters[i] = '0';
   const int maxWordLength = 11;
+
+
+
+  char chosenWord[20];
+  ifstream wordsFile;
+  wordsFile.open("HangmanProgram/HangmanWords.txt");
+  if (wordsFile.is_open())
+  {
+    /*
+    streampos begin, end;
+    begin = wordsFile.tellg();
+    wordsFile.seekg(0, ios::end);
+    end = wordsFile.tellg();
+    cout << "HangmanWords file size is: " << (end-begin) << " bytes.\n";
+    */
+
+    int numLines;
+    string line;
+    //wordsFile.seekg(0, ios::beg);
+    wordsFile.clear();
+    while (getline(wordsFile, line))
+    cout << "Line " << numLines << ": " << line << '\n';
+      numLines++;
+    cout << "There are " << numLines << " lines in HangmanWords\n";
+    cout << "good:\t " << wordsFile.good() << '\n';
+    cout << "bad:\t " << wordsFile.bad() << '\n';
+    cout << "fail:\t " << wordsFile.fail() << '\n';
+    cout << "eof:\t " << wordsFile.eof() << '\n';
+
+
+    wordsFile.close();
+  }
+  else cout << "Unable to open HangmanWords.txt\n";
+
+
+
+
   const char words[][maxWordLength] = {"BUBBLES", "TOPAZ", "LOVELIES", "HALLELUJAH", "DOVES", "SEETHING"};
   int wordNumber = getRandomWord(beginning);
   cout << "Word number: " << wordNumber << '\n';
