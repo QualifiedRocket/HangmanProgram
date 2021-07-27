@@ -1,6 +1,8 @@
 // Hangman in C++
 #include <iostream>
+#include <fstream>
 #include <cstring>
+#include <string>
 #include <random>
 #include <chrono>
 
@@ -103,23 +105,77 @@ void getVowelMarks(const char mysteryWord[], int mysteryWordLength, char vowelMa
           break;
         }
       }
-      if (!isAVowel) vowelMarks[i] = '-';
+      if (!isAVowel) vowelMarks[i] = ' ';
       isAVowel = false;
     }
   }
 }
-int getRandomWord(myClock::time_point beginning)
+int getRandomWord(myClock::time_point beginning, const int wordsMax)
 {
   // Get seed from system clock
   myClock::duration difference = myClock::now() - beginning;
   unsigned seed = difference.count();
-  cout << "Random seed: " << seed << '\n';
+  //cout << "Random seed: " << seed << '\n';
 
   // Use seed to get random word
   default_random_engine generator(seed);
-  const int wordsMax = 5;
-  uniform_int_distribution<int> distribution(0,wordsMax);
+  uniform_int_distribution<int> distribution(1,wordsMax);
   return distribution(generator);
+}
+void getWordFromFile(myClock::time_point beginning, string& chosenWord)
+{
+  ifstream wordsFile;
+  wordsFile.open("HangmanProgram/HangmanWords.txt");
+  if (!wordsFile.is_open())
+  {
+    cout << "Unable to open HangmanWords.txt\n";
+  }
+  else
+  {
+    // Get number of lines in file
+    int lineNum = 0;
+    string lineWord;
+    while (getline(wordsFile, lineWord))
+    {
+      lineNum++;
+      /*
+      cout << "Line " << lineNum << ": " << lineWord << '\n';
+      cout << "good:\t " << wordsFile.good() << '\n';
+      cout << "bad:\t " << wordsFile.bad() << '\n';
+      cout << "fail:\t " << wordsFile.fail() << '\n';
+      cout << "eof:\t " << wordsFile.eof() << '\n';
+      */
+    }
+    /*
+    cout << "There are " << lineNum << " lines in HangmanWords\n";
+    cout << "good:\t " << wordsFile.good() << '\n';
+    cout << "bad:\t " << wordsFile.bad() << '\n';
+    cout << "fail:\t " << wordsFile.fail() << '\n';
+    cout << "eof:\t " << wordsFile.eof() << '\n';
+    */
+
+    wordsFile.clear();
+
+    // Get random word number
+    const int wordsMax = lineNum;
+    int wordNumber = getRandomWord(beginning, wordsMax);
+
+    // Retrieve word from line number in file
+    lineNum = 0;
+    wordsFile.seekg(0, ios::beg);
+    while (getline(wordsFile, lineWord))
+    {
+      lineNum++;
+      if (lineNum == wordNumber)
+      {
+        cout << "Chosen line " << lineNum << " with word: " << lineWord << '\n';
+        chosenWord = lineWord;
+        break;
+      }
+    }
+    wordsFile.clear();
+    wordsFile.close();
+  }
 }
 
 // Printing Game Letters
@@ -140,9 +196,12 @@ void printRevealedWord(char revealedWord[], int mysteryWordLength)
 }
 void printVowelMarks(char vowelMarks[], int mysteryWordLength)
 {
-  cout << "\t\t";
-  for (int i=0; i<mysteryWordLength; i++)
-    cout << vowelMarks[i] << ' ';
+  if (settingShowVowelMarks)
+  {
+    cout << "\t\t";
+    for (int i=0; i<mysteryWordLength; i++)
+      cout << vowelMarks[i] << ' ';
+  }
   cout << "\n\n";
 }
 void printWrongGuesses(int numberOf)
@@ -164,9 +223,9 @@ int convertCharToInt(char input)
 {
   return input - 48;
 }
-bool checkIfUserInputIsOneChar(char input[])
+bool checkIfUserInputIsOneChar(string input)
 {
-  if (strlen(input) != 1)
+  if (input.length() != 1)
     return false;
   else
     return true;
@@ -177,9 +236,9 @@ bool getUserInput(char outputType)
     cout << "Please enter a letter: ";
   else if (outputType == 'i')
     cout << "Please enter a number: ";
-  char input[32];
+  string input;
   char inputChar;
-  cin.getline(input, 32);
+  getline(cin, input);
   if (checkIfUserInputIsOneChar(input))
   {
     inputChar = input[0];
@@ -319,17 +378,16 @@ void runGame(myClock::time_point beginning)
   // Guessed letters
   const int maxGuessedLetters = 27;
   char guessedLetters[maxGuessedLetters] = {' '};
-  for (int i=1; i<maxGuessedLetters; i++) guessedLetters[i] = '0';
-  const int maxWordLength = 11;
-  const char words[][maxWordLength] = {"BUBBLES", "TOPAZ", "LOVELIES", "HALLELUJAH", "DOVES", "SEETHING"};
-  int wordNumber = getRandomWord(beginning);
-  cout << "Word number: " << wordNumber << '\n';
+  for (int i=1; i<maxGuessedLetters; i++)
+    guessedLetters[i] = '0';
 
   // Mystery word
-  const int mysteryWordLength = strlen(words[wordNumber]);
+  string chosenWord;
+  getWordFromFile(beginning, chosenWord);
+  const int mysteryWordLength = chosenWord.length();
   char mysteryWord[mysteryWordLength];
   for (int i=0; i<=mysteryWordLength; i++)
-    mysteryWord[i] = words[wordNumber][i];
+    mysteryWord[i] = chosenWord[i];
 
   // Revealed word
   char revealedWord[mysteryWordLength];
