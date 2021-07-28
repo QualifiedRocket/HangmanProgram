@@ -18,7 +18,11 @@ using myClock = chrono::high_resolution_clock;
 - Remove global variables - Done
 - Get vowel marks once - Done
 - Get random word on game start - Done
-- Get random word from text file -
+- Get random word from text file - Done
+- Validate words from file when pulled -
+- Add words to file in settings -
+- Figure out phrases -
+- Have computer guess player's word -
 
 - Make this a collection of games
 */
@@ -214,8 +218,8 @@ void printVictoryMessage()
 }
 void printDefeatMessage(char mysteryWord[])
 {
-  cout << "I'm sorry, you lost.";
-  cout << "\n\nThe answer is: " << mysteryWord;
+  cout << "I'm sorry, you lost.\n\n";
+  cout << "The answer is: " << mysteryWord;
 }
 
 // Character Handling and Checking
@@ -385,6 +389,7 @@ void runGame(myClock::time_point beginning)
   string chosenWord;
   getWordFromFile(beginning, chosenWord);
   const int mysteryWordLength = chosenWord.length();
+  cout << "Length is: " << mysteryWordLength;
   char mysteryWord[mysteryWordLength];
   for (int i=0; i<=mysteryWordLength; i++)
     mysteryWord[i] = chosenWord[i];
@@ -407,7 +412,7 @@ void runGame(myClock::time_point beginning)
 
   while (gameRunning)
   {
-    cout << "Word is: " << mysteryWord << '\n';
+    //cout << "Word is: " << mysteryWord << '\n';
     printHangman(wrongGuesses);
     printWrongGuesses(wrongGuesses);
     cout << '\n';
