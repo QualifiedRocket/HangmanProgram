@@ -1,13 +1,13 @@
 // Hangman in C++
 #include <iostream>
 #include <fstream>
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <random>
 #include <chrono>
 
-using namespace std;
-using myClock = chrono::high_resolution_clock;
+using myClock = std::chrono::high_resolution_clock;
 
 /*
 - Implement x under vowels - Done
@@ -28,15 +28,21 @@ using myClock = chrono::high_resolution_clock;
 */
 
 // Player Settings
+const std::string playerWordsFile = "HangmanProgram/CommonNouns.txt";
+const std::string restrictedWordsFile = "HangmanProgram/RestrictedWords.txt";
 bool settingShowVowelMarks = false;
+int settingMaxGuesses = 6;
+int settingMinWordLength;
+int settingMaxWordLength;
 
 // Global variables
-char userInput;
+char userInputChar;
+int userInputInt;
 
 // Display
 void printArtHorizontalLine()
 {
-  for (int i=0; i<60; i++) cout << '/';
+  for (int i=0; i<60; i++) std::cout << '/';
 }
 void printHangman(int wrongGuesses)
 {
@@ -67,31 +73,172 @@ void printHangman(int wrongGuesses)
   // Modify hangman picture
   switch (wrongGuesses)
   {
-    case 5:
+    case 6:
       hangmanPicture[4][13] = '\\';
-    case 4:
+    case 5:
       hangmanPicture[4][11] = '/';
-    case 3:
+    case 4:
       hangmanPicture[3][13] = '\\';
-    case 2:
+    case 3:
       hangmanPicture[3][11] = '/';
+    case 2:
+      hangmanPicture[3][12] = '|';
     case 1:
       hangmanPicture[2][12] = 'O';
-      hangmanPicture[3][12] = '|';
     // Print hangman picture
     default:
       for (int row=0; row<numRows; row++)
       {
         for (int col=0; col<numCols; col++)
         {
-          cout << hangmanPicture[row][col];
+          std::cout << hangmanPicture[row][col];
         }
-        cout << '\n';
+        std::cout << '\n';
       }
   }
 }
 
 // Setup
+
+bool getMinMaxWordLength(int& smallestWordInFile, int& largestWordInFile)
+{
+  std::ifstream readFile;
+  readFile.open(playerWordsFile);
+  if (!readFile.is_open())
+  {
+    std::cout << "Unable to open " << playerWordsFile << std::endl;
+    return false;
+  }
+  else
+  {
+    std::string lineWord;
+    while (getline(readFile, lineWord))
+    {
+      if (lineWord.length()-1 < smallestWordInFile)
+        smallestWordInFile = lineWord.length()-1;
+      else if (lineWord.length()-1 > largestWordInFile)
+        largestWordInFile = lineWord.length()-1;
+    }
+    settingMinWordLength = smallestWordInFile;
+    settingMaxWordLength = largestWordInFile;
+  }
+  readFile.clear();
+  readFile.close();
+  return true;
+}
+
+bool restrictWordsFile()
+{
+  std::ifstream readFile;
+  std::ofstream writeFile;
+  readFile.open(playerWordsFile);
+  writeFile.open(restrictedWordsFile);
+  if (!readFile.is_open())
+  {
+    std::cout << "Unable to open " << playerWordsFile << std::endl;
+    return false;
+  }
+  else if (!writeFile.is_open())
+  {
+    std::cout << "Unable to open " << restrictedWordsFile << std::endl;
+    readFile.close();
+    return false;
+  }
+  else
+  {
+    std::string lineWord;
+    while (getline(readFile, lineWord))
+    {
+      if (lineWord.length()-1 < settingMinWordLength || lineWord.length()-1 > settingMaxWordLength)
+        continue;
+      else
+        writeFile << lineWord << std::endl;
+    }
+  }
+  readFile.clear();
+  writeFile.clear();
+  readFile.close();
+  writeFile.close();
+  return true;
+}
+int getRandomWord(myClock::time_point beginning, const int wordsMax)
+{
+  // Get seed from system clock
+  myClock::duration difference = myClock::now() - beginning;
+  unsigned seed = difference.count();
+  //std::cout << "Random seed: " << seed << '\n';
+
+  // Use seed to get random word
+  std::default_random_engine generator(seed);
+  std::uniform_int_distribution<int> distribution(1,wordsMax);
+  return distribution(generator);
+}
+bool getWordFromFile(myClock::time_point beginning, std::string& chosenWord)
+{
+  std::ifstream wordsFile;
+  wordsFile.open(restrictedWordsFile);
+  if (!wordsFile.is_open())
+  {
+    std::cout << "Unable to open words file" << std::endl;
+    return false;
+  }
+  else
+  {
+    // Get number of lines in file
+    int lineNum = 0;
+    std::string lineWord;
+    while (getline(wordsFile, lineWord))
+    {
+      lineNum++;
+      /*
+      std::cout << "Line " << lineNum << ": " << lineWord << '\n';
+      std::cout << "good:\t " << wordsFile.good() << '\n';
+      std::cout << "bad:\t " << wordsFile.bad() << '\n';
+      std::cout << "fail:\t " << wordsFile.fail() << '\n';
+      std::cout << "eof:\t " << wordsFile.eof() << '\n';
+      */
+    }
+    /*
+    std::cout << "There are " << lineNum << " lines in HangmanWords\n";
+    std::cout << "good:\t " << wordsFile.good() << '\n';
+    std::cout << "bad:\t " << wordsFile.bad() << '\n';
+    std::cout << "fail:\t " << wordsFile.fail() << '\n';
+    std::cout << "eof:\t " << wordsFile.eof() << '\n';
+    */
+    wordsFile.clear();
+
+    const int wordsMax = lineNum;
+
+    bool gettingWord = true;
+    while (gettingWord)
+    {
+      int wordNumber = getRandomWord(beginning, wordsMax);
+
+      // Retrieve word from line number in file
+      lineNum = 0;
+      wordsFile.seekg(0, std::ios::beg);
+      while (getline(wordsFile, lineWord))
+      {
+        lineNum++;
+        if (lineNum == wordNumber)
+        {
+          //std::cout << "Chosen line " << lineNum << " with word: " << lineWord << std::endl;
+          break;
+        }
+      }
+      for (char& c : lineWord)
+        c = toupper(c);
+      //std::cout << "Chosen line " << lineNum << " with word: " << lineWord << '\n';
+      chosenWord = lineWord;
+      gettingWord = false;
+    }
+    wordsFile.clear();
+    wordsFile.close();
+    if (remove(restrictedWordsFile.c_str()) != 0)
+      std::cout << "Error: Could not remove restricted words file" << std::endl;
+  }
+  return true;
+}
 void getVowelMarks(const char mysteryWord[], int mysteryWordLength, char vowelMarks[])
 {
   if (settingShowVowelMarks)
@@ -114,112 +261,47 @@ void getVowelMarks(const char mysteryWord[], int mysteryWordLength, char vowelMa
     }
   }
 }
-int getRandomWord(myClock::time_point beginning, const int wordsMax)
-{
-  // Get seed from system clock
-  myClock::duration difference = myClock::now() - beginning;
-  unsigned seed = difference.count();
-  //cout << "Random seed: " << seed << '\n';
-
-  // Use seed to get random word
-  default_random_engine generator(seed);
-  uniform_int_distribution<int> distribution(1,wordsMax);
-  return distribution(generator);
-}
-void getWordFromFile(myClock::time_point beginning, string& chosenWord)
-{
-  ifstream wordsFile;
-  wordsFile.open("HangmanProgram/HangmanWords.txt");
-  if (!wordsFile.is_open())
-  {
-    cout << "Unable to open HangmanWords.txt\n";
-  }
-  else
-  {
-    // Get number of lines in file
-    int lineNum = 0;
-    string lineWord;
-    while (getline(wordsFile, lineWord))
-    {
-      lineNum++;
-      /*
-      cout << "Line " << lineNum << ": " << lineWord << '\n';
-      cout << "good:\t " << wordsFile.good() << '\n';
-      cout << "bad:\t " << wordsFile.bad() << '\n';
-      cout << "fail:\t " << wordsFile.fail() << '\n';
-      cout << "eof:\t " << wordsFile.eof() << '\n';
-      */
-    }
-    /*
-    cout << "There are " << lineNum << " lines in HangmanWords\n";
-    cout << "good:\t " << wordsFile.good() << '\n';
-    cout << "bad:\t " << wordsFile.bad() << '\n';
-    cout << "fail:\t " << wordsFile.fail() << '\n';
-    cout << "eof:\t " << wordsFile.eof() << '\n';
-    */
-
-    wordsFile.clear();
-
-    // Get random word number
-    const int wordsMax = lineNum;
-    int wordNumber = getRandomWord(beginning, wordsMax);
-
-    // Retrieve word from line number in file
-    lineNum = 0;
-    wordsFile.seekg(0, ios::beg);
-    while (getline(wordsFile, lineWord))
-    {
-      lineNum++;
-      if (lineNum == wordNumber)
-      {
-        cout << "Chosen line " << lineNum << " with word: " << lineWord << '\n';
-        chosenWord = lineWord;
-        break;
-      }
-    }
-    wordsFile.clear();
-    wordsFile.close();
-  }
-}
 
 // Printing Game Letters
 void printGuessedLetters(int guessNumber, char guessedLetters[])
 {
-  cout << "Guesses so far: ";
+  std::cout << "Guesses so far: ";
   for (int i=1; i<guessNumber; i++)
   {
-    cout << guessedLetters[i] << ' ';
+    std::cout << guessedLetters[i] << ' ';
   }
-  cout << '\n';
+  std::cout << '\n';
 }
 void printRevealedWord(char revealedWord[], int mysteryWordLength)
 {
-  cout << "Revealed word:\t";
-  for (int i=0; i<mysteryWordLength; i++) cout << revealedWord[i] << ' ';
-  cout << '\n';
+  std::cout << "Revealed word:\t";
+  for (int i=0; i<mysteryWordLength; i++) std::cout << revealedWord[i] << ' ';
+  std::cout << '\n';
 }
 void printVowelMarks(char vowelMarks[], int mysteryWordLength)
 {
   if (settingShowVowelMarks)
   {
-    cout << "\t\t";
+    std::cout << "\t\t";
     for (int i=0; i<mysteryWordLength; i++)
-      cout << vowelMarks[i] << ' ';
+      std::cout << vowelMarks[i] << ' ';
   }
-  cout << "\n\n";
+  std::cout << "\n\n";
 }
 void printWrongGuesses(int numberOf)
 {
-  cout << "You have guessed wrong " << numberOf << " times.\n";
+  std::cout << "You have guessed wrong " << numberOf << " times.\n";
 }
 void printVictoryMessage()
 {
-  cout << "Congratulations! You won!";
+  std::cout << "Congratulations! You won!";
 }
-void printDefeatMessage(char mysteryWord[])
+void printDefeatMessage(char mysteryWord[], int mysteryWordLength)
 {
-  cout << "I'm sorry, you lost.\n\n";
-  cout << "The answer is: " << mysteryWord;
+  std::cout << "I'm sorry, you lost.\n\n";
+  std::cout << "The answer is: ";
+  for (int i=0; i<mysteryWordLength; i++)
+    std::cout << mysteryWord[i];
 }
 
 // Character Handling and Checking
@@ -227,7 +309,7 @@ int convertCharToInt(char input)
 {
   return input - 48;
 }
-bool checkIfUserInputIsOneChar(string input)
+bool checkIfUserInputIsOneChar(std::string input)
 {
   if (input.length() != 1)
     return false;
@@ -237,46 +319,50 @@ bool checkIfUserInputIsOneChar(string input)
 bool getUserInput(char outputType)
 {
   if (outputType == 'c')
-    cout << "Please enter a letter: ";
+    std::cout << "Please enter a letter: ";
   else if (outputType == 'i')
-    cout << "Please enter a number: ";
-  string input;
+    std::cout << "Please enter a number: ";
+  std::string input;
   char inputChar;
-  getline(cin, input);
-  if (checkIfUserInputIsOneChar(input))
+  int inputInt;
+  getline(std::cin, input);
+  if (outputType == 'c' && checkIfUserInputIsOneChar(input))
   {
     inputChar = input[0];
-    if (outputType == 'c')
+    if (isalpha(inputChar))
     {
-      if (isalpha(inputChar))
-      {
-        if (islower(inputChar))
-        {
-          inputChar = toupper(inputChar);
-        }
-        userInput = inputChar;
-        return true;
-      }
-    }
-    else if (outputType == 'i')
-    {
-      if (isdigit(inputChar))
-      {
-        userInput = convertCharToInt(inputChar);
-        return true;
-      }
+      inputChar = toupper(inputChar);
+      userInputChar = inputChar;
+      return true;
     }
   }
-  cout << "Please enter a valid option";
+  else if (outputType == 'i')
+  {
+    bool isANumber = true;
+    for (char c : input)
+    {
+      if (!isdigit(c))
+      {
+        isANumber = false;
+        break;
+      }
+    }
+    if (isANumber)
+    {
+      userInputInt = stoi(input);
+      return true;
+    }
+  }
+  std::cout << "Please enter a valid option";
   return false;
 }
 bool inputWasNotAlreadyGuessed(int guessNumber, char guessedLetters[])
 {
   for (int i=1; i<=guessNumber; i++)
   {
-    if (userInput == guessedLetters[i])
+    if (userInputChar == guessedLetters[i])
     {
-      cout << "You already guessed that letter!";
+      std::cout << "You already guessed that letter!";
       return false;
     }
   }
@@ -284,30 +370,30 @@ bool inputWasNotAlreadyGuessed(int guessNumber, char guessedLetters[])
 }
 void addGuessToGuessedLetters(int& guessNumber, char guessedLetters[])
 {
-  guessedLetters[guessNumber] = userInput;
+  guessedLetters[guessNumber] = userInputChar;
   guessNumber++;
 }
 bool guessIsCorrect(char mysteryWord[], int mysteryWordLength)
 {
   for (int i=0; i < mysteryWordLength; i++)
   {
-    if (mysteryWord[i] == userInput)
+    if (mysteryWord[i] == userInputChar)
     {
-      cout << "Correct!";
+      std::cout << "Correct!";
       return true;
     }
   }
-  cout << "Incorrect!";
+  std::cout << "Incorrect!";
   return false;
 }
 void revealLetters(char mysteryWord[], int mysteryWordLength, char revealedWord[])
 {
   for (int i=0; i < mysteryWordLength; i++)
   {
-    if (mysteryWord[i] == userInput) revealedWord[i] = userInput;
+    if (mysteryWord[i] == userInputChar) revealedWord[i] = userInputChar;
   }
 }
-bool playerHasWon(char mysteryWord[], int mysteryWordLength, char revealedWord[])
+bool playerHasWon(char mysteryWord[], int mysteryWordLength, char revealedWord[], bool& gameRunning)
 {
   int revealedLetters = 0;
   for (int i=0; i < mysteryWordLength; i++)
@@ -323,26 +409,29 @@ bool playerHasWon(char mysteryWord[], int mysteryWordLength, char revealedWord[]
   {
     return true;
   }
-  cout << "Error with playerHasWon\n";
+  std::cout << "Error with playerHasWon\n";
+  gameRunning = false;
   return false;
 }
 bool playerHasLost(int wrongGuesses)
 {
-  if (wrongGuesses == 5) return true;
+  if (wrongGuesses == settingMaxGuesses) return true;
   else return false;
 }
 
 // Menu
 void printOptionsMenu()
 {
-  cout << "Options Menu\n";
-  cout << "Please select an option:\n";
-  cout << "\t1. Show vowel marks\t[";
-  if (settingShowVowelMarks) cout << "o]\n";
-  else cout << " ]\n";
-  cout << "\t2. Return to main menu\n";
+  std::cout << "Options Menu\n";
+  std::cout << "Please select an option:\n";
+  std::cout << "\t1. Show vowel marks\t[";
+  if (settingShowVowelMarks) std::cout << "o]\n";
+  else std::cout << " ]\n";
+  std::cout << "\t2. Smallest word size: " << settingMinWordLength << '\n';
+  std::cout << "\t3. Largest word size: " << settingMaxWordLength << '\n';
+  std::cout << "\t4. Return to main menu\n";
 }
-void gameOptionsMenu()
+void gameOptionsMenu(int smallestWordInFile, int largestWordInFile)
 {
   bool inGameOptionsMenu = true;
   while (inGameOptionsMenu)
@@ -350,28 +439,52 @@ void gameOptionsMenu()
     printOptionsMenu();
     if (getUserInput('i'))
     {
-      switch (userInput)
+      switch (userInputInt)
       {
         case 1:
           settingShowVowelMarks = !settingShowVowelMarks;
           break;
         case 2:
+          std::cout << "Enter a new smallest word size\n";
+          if (getUserInput('i'))
+          {
+            if (userInputInt < smallestWordInFile)
+              std::cout << "Word size cannot be less than " << smallestWordInFile;
+            else if (userInputInt <= settingMaxWordLength)
+              settingMinWordLength = userInputInt;
+            else
+              std::cout << "Smallest word size must be smaller than largest word size";
+          }
+          break;
+        case 3:
+          std::cout << "Enter a new largest word size\n";
+          if (getUserInput('i'))
+          {
+            if (userInputInt > largestWordInFile)
+              std::cout << "Word size cannot be greater than " << largestWordInFile;
+            else if (userInputInt >= settingMinWordLength)
+              settingMaxWordLength = userInputInt;
+            else
+              std::cout << "Largest word size must be larger than smallest word size";
+          }
+          break;
+        case 4:
           inGameOptionsMenu = false;
           break;
         default:
-          cout << "Please enter a valid option";
+          std::cout << "Please enter a valid option";
       }
     }
-    cout << "\n\n\n";
+    std::cout << "\n\n\n";
   }
 }
 void printMainMenu()
 {
-  cout << "Main Menu\n";
-  cout << "Please Select an Option:\n";
-  cout << "\t1. Play Game\n";
-  cout << "\t2. Options\n";
-  cout << "\t3. Exit\n";
+  std::cout << "Main Menu\n";
+  std::cout << "Please Select an Option:\n";
+  std::cout << "\t1. Play Game\n";
+  std::cout << "\t2. Options\n";
+  std::cout << "\t3. Exit\n";
 }
 
 // Game
@@ -379,28 +492,39 @@ void runGame(myClock::time_point beginning)
 {
   bool gameRunning = true;
   // Setup
-  // Guessed letters
-  const int maxGuessedLetters = 27;
-  char guessedLetters[maxGuessedLetters] = {' '};
-  for (int i=1; i<maxGuessedLetters; i++)
-    guessedLetters[i] = '0';
 
-  // Mystery word
-  string chosenWord;
-  getWordFromFile(beginning, chosenWord);
-  const int mysteryWordLength = chosenWord.length();
-  cout << "Length is: " << mysteryWordLength;
+  if (!restrictWordsFile())
+  {
+    std::cout << "Error: Failure generating restrictedWordsFile" << std::endl;
+    gameRunning = false;
+  }
+
+  // Get mystery word
+  std::string chosenWord;
+  if (!getWordFromFile(beginning, chosenWord))
+  {
+    std::cout << "Error: Failure obtaining word from file!" << std::endl;
+    gameRunning = false;
+  }
+
+  const int mysteryWordLength = chosenWord.length()-1;
   char mysteryWord[mysteryWordLength];
   for (int i=0; i<=mysteryWordLength; i++)
     mysteryWord[i] = chosenWord[i];
 
   // Revealed word
   char revealedWord[mysteryWordLength];
-  for (int i=0; i<mysteryWordLength; i++)
+  for (int i=0; i<=mysteryWordLength; i++)
   {
     if (mysteryWord[i] == ' ') revealedWord[i] = ' ';
     else revealedWord[i] = '_';
   }
+
+  // Guessed letters
+  const int maxGuessedLetters = 27;
+  char guessedLetters[maxGuessedLetters] = {' '};
+  for (int i=1; i<maxGuessedLetters; i++)
+    guessedLetters[i] = '0';
 
   // Vowels
   char vowelMarks[mysteryWordLength];
@@ -408,34 +532,34 @@ void runGame(myClock::time_point beginning)
 
   int guessNumber = 1;
   int wrongGuesses = 0;
-  cout << "\n\n";
+  std::cout << "\n\n";
 
   while (gameRunning)
   {
-    //cout << "Word is: " << mysteryWord << '\n';
+    //std::cout << "Word is: " << mysteryWord << '\n';
     printHangman(wrongGuesses);
     printWrongGuesses(wrongGuesses);
-    cout << '\n';
+    std::cout << '\n';
     printRevealedWord(revealedWord, mysteryWordLength);
     printVowelMarks(vowelMarks, mysteryWordLength);
     printGuessedLetters(guessNumber, guessedLetters);
-    if (playerHasWon(mysteryWord, mysteryWordLength, revealedWord))
+    if (playerHasWon(mysteryWord, mysteryWordLength, revealedWord, gameRunning))
     {
-      cout << '\n';
+      std::cout << '\n';
       printVictoryMessage();
       gameRunning = false;
     }
     else if (playerHasLost(wrongGuesses))
     {
-      cout << '\n';
-      printDefeatMessage(mysteryWord);
+      std::cout << '\n';
+      printDefeatMessage(mysteryWord, mysteryWordLength);
       gameRunning = false;
     }
     else
     {
-      cout << '\n';
+      std::cout << '\n';
       printArtHorizontalLine();
-      cout << "\n\n";
+      std::cout << "\n\n";
       if (getUserInput('c'))
       {
         if (inputWasNotAlreadyGuessed(guessNumber, guessedLetters))
@@ -447,36 +571,40 @@ void runGame(myClock::time_point beginning)
         }
       }
     }
-    cout << '\n';
+    std::cout << '\n' << std::endl;
   }
 }
 void gameMainMenu(myClock::time_point beginning)
 {
-  cout << "\nWelcome to Hangman!\n\n";
+  std::cout << "\nWelcome to Hangman!\n\n";
+  int smallestWordInFile = 50;
+  int largestWordInFile = 1;
   bool inGameMainMenu = true;
+  if (!getMinMaxWordLength(smallestWordInFile, largestWordInFile))
+    inGameMainMenu = false;
   while (inGameMainMenu)
   {
     printMainMenu();
     if (getUserInput('i'))
     {
-      switch (userInput)
+      switch (userInputInt)
       {
         case 1:
           runGame(beginning);
           break;
         case 2:
-          cout << "\n\n\n";
-          gameOptionsMenu();
+          std::cout << "\n\n\n";
+          gameOptionsMenu(smallestWordInFile, largestWordInFile);
           break;
         case 3:
-          cout << "Thanks for playing!\n\n";
+          std::cout << "Thanks for playing!\n\n";
           inGameMainMenu = false;
           break;
         default:
-          cout << "Please enter a valid option\n";
+          std::cout << "Please enter a valid option\n";
       }
     }
-    cout << "\n\n\n";
+    std::cout << "\n\n\n";
   }
 }
 
